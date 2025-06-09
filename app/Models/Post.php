@@ -5,10 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Sluggable\HasSlug;
+use Spatie\Sluggable\SlugOptions;
 
 class Post extends Model
 {
     use HasFactory;
+    use HasSlug;
 
     protected $fillable = [
         'image',
@@ -19,6 +22,16 @@ class Post extends Model
         'user_id',
         'published_at',        
     ];
+
+    /**
+     * Get the options for generating the slug.
+     */
+    public function getSlugOptions() : SlugOptions
+    {
+        return SlugOptions::create()
+            ->generateSlugsFrom('title')
+            ->saveSlugsTo('slug');
+    }
 
     public function user()
     {
@@ -43,5 +56,10 @@ class Post extends Model
             return Storage::url($this->image);
         }
         return null;
+    }
+
+    public function likes()
+    {
+        return $this->hasMany(Like::class);
     }
 }

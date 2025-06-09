@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use App\Http\Requests\PostCreateRequest;
+use App\Http\Requests\PostUpdateRequest;
 
 class PostController extends Controller
 {
@@ -17,8 +18,16 @@ class PostController extends Controller
      */
     public function index()
     {
+        $user = auth()->user();
+
+        $query = Post::latest();
         
-        $posts = Post::orderBy('created_at', 'DESC')->simplePaginate(5);        
+        if ($user) {
+            $ids = $user->following()->pluck('users.id');
+            $query->whereIn('user_id', $ids);
+        }
+
+        $posts = $query->simplePaginate(5);
 
         return view('post.index', [            
             'posts' => $posts,
@@ -70,15 +79,38 @@ class PostController extends Controller
      */
     public function edit(Post $post)
     {
-        //
+        if ($post->user_id !== Auth::id()) {
+            abort(403);
+        }
+        $categories = Category::get();
+        return view('post.edit', [
+            'post' => $post,
+            'categories' => $categories,
+        ]);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Post $post)
+    public function update(PostUpdateRequest $request, Post $post)
     {
-        //
+        if ($post->user_id !== Auth::id()) {
+            abort(403);
+        }
+        $data = $request->validated();
+
+        // Handle new image upload
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('posts', 'public');
+            $data['image'] = $imagePath;
+
+            // Optional: delete the old image
+            // Storage::disk('public')->delete($post->image);
+        }
+
+        $post->update($data);
+
+        return redirect()->route('myPosts');
     }
 
     /**
@@ -86,6 +118,32 @@ class PostController extends Controller
      */
     public function destroy(Post $post)
     {
-        //
+        if ($post->user_id !== Auth::id()) {
+            abort(403);
+        }
+        $post->delete();
+
+        return redirect()->route('dashboard');
+    }
+
+    public function category(Category $category)
+    {
+        $posts = $category->posts()->latest()->simplePaginate(5);
+
+        return view('post.index', [
+            'posts' => $posts,
+        ]);
+    }
+
+    public function myPosts()
+    {
+        $user = auth()->user();
+        $posts = $user->posts()
+            ->latest()
+            ->simplePaginate(5);
+
+        return view('post.index', [
+            'posts' => $posts,
+        ]);
     }
 }
