@@ -62,7 +62,39 @@
                     </div>
                     <!--Likes-->
                     <x-like-button :post="$post"/>
-                
+                    <div class="mt-2">
+                        @if(Auth::check())
+                            <form action="{{ route('comments.store') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="post_id" value="{{ $post->id }}">
+                                <textarea name="body" rows="2" class="form-control w-full" required placeholder="Write your comment here..."></textarea>
+                                <div class="flex justify-end">                                
+                                    <button type="submit" class="btn btn-primary mt-2 rounded-full px-4 py-2 text-white bg-emerald-600">Post Comment</button>
+                                </div>                                
+                            </form>
+                        @else
+                            <p>Please <a href="{{ route('login') }}">log in</a> to post a comment.</p>
+                        @endif
+                    </div>
+                    <div class="mt-2">
+                        <h4 class="mb-2 underline">Comments</h4>
+                        @foreach($post->comments as $comment)
+                            <div class="mb-2">                                                                
+                                <div class="flex justify-between">
+                                    <strong>{{ $comment->user->name }}</strong>                                    
+                                    @can('delete', $comment)
+                                        <form action="{{ route('comments.destroy', $comment->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger btn-sm rounded-full px-4 py-2 text-white bg-red-600">Remove Comment</button>
+                                        </form>
+                                    @endcan
+                                </div> 
+                                <p>{{ $comment->body }}</p>
+                                <small>{{ $comment->created_at->diffForHumans() }}</small>
+                            </div>                                                       
+                        @endforeach
+                    </div>                
                 </div>
             </div>            
         </div>
